@@ -6,30 +6,30 @@ import world.Roomba;
 public class MyRoomba extends Roomba {
     public MyRoomba(int x, int y, int radius) {
         super(x, y, radius);
-        start_x = x;
-        start_y = y;
+//        start_x = x;
+//        start_y = y;
         sweepStatus = -1;
         turnCache = 0;
         forwardCache = 0;
-        rightSlideSteps = 0;
-        botStatus = Status.FREE;
+        cornerGoDirFlag = 0;
+        RandomCountSteps = 0;
+        farInfraredPoint = 80;
+        RandomCountthreshold = 1200;
         botjob = Job.OnCorner;
 
-        OnleftEdge = false;
-        OnUpEdge = false;
 
     }
 
     private boolean turning = false;
     private Direction newDir = Direction.NORTH;
-    private int start_x, start_y;
+//    private int start_x, start_y;
     private Move formerMovment;
-    private Status botStatus;
     private Job botjob;
-    private Boolean OnleftEdge;
-    private Boolean OnUpEdge;
+    private int cornerGoDirFlag;
     private int sweepStatus,formerSweepStatus;
-    private int rightSlideSteps;
+    private int RandomCountSteps;
+    private int RandomCountthreshold;
+    private int farInfraredPoint;
     private int shiftDistance;
     private int turnCache;
     private int forwardCache;
@@ -37,26 +37,19 @@ public class MyRoomba extends Roomba {
     public Move getToCorner() {
         //	current north west corner
         Move currMov = Move.FORWARD;
-        if (this.getDirection()==Direction.WEST && this.wallSensor){
+        if (this.getDirection()==Direction.WEST && this.wallSensor && this.frontBumper){
             botjob = Job.OnSweep;
             sweepStatus = 0;
             formerSweepStatus = sweepStatus;
-            botStatus = Status.FREE;
         }
-        if (this.getDirection() == Direction.WEST && frontBumper) {
-            OnleftEdge = true;
-            if (botStatus == Status.FREE)
-                OnUpEdge = false;
+        if (this.getDirection() == Direction.NORTH && frontBumper && formerMovment == Move.FORWARD) {
+            cornerGoDirFlag = 0;
+        }else if(this.getDirection() == Direction.WEST && frontBumper && formerMovment == Move.FORWARD){
+            cornerGoDirFlag = 1;
         }
-        if (this.getDirection() == Direction.NORTH && frontBumper) {
-            OnUpEdge = true;
-            if (botStatus == Status.FREE)
-                OnleftEdge = false;
-        }
-        // Move
-        if (!OnleftEdge) {
+        if (cornerGoDirFlag ==0){
             currMov = turnToWest();
-        } else if (!OnUpEdge) {
+        }else {
             currMov = turnToNorth();
         }
         return currMov;
@@ -125,7 +118,28 @@ public class MyRoomba extends Roomba {
             currMov = Move.TURNCLOCKWISE;
             turnCache++;
         }
+        RandomCountSteps++;
+        if (RandomCountSteps > RandomCountthreshold){
+            botjob = Job.OnRandomWalk;
+        }
         return currMov;
+    }
+    public Move randomWalk(){
+        if (this.infraredSensor > farInfraredPoint){
+            botjob = Job.OnSweep;
+        }
+
+        if(this.turning && this.getDirection() == newDir) {
+			this.turning = false;
+		}
+		if(this.frontBumper && !this.turning) {
+			turning = true;
+			newDir = Direction.values()[(int)(Math.random()*Direction.values().length)];
+			return Move.TURNCLOCKWISE;
+		}
+
+		if(this.turning) { return Move.TURNCLOCKWISE; }
+		return Move.FORWARD;
     }
 
     @Override
@@ -136,33 +150,15 @@ public class MyRoomba extends Roomba {
             case OnCorner -> currMov = getToCorner();
             case OnSweep -> currMov = horzionSweep();
             case OnRightSlide -> currMov = rightSlideWalk();
+            case OnRandomWalk -> currMov = randomWalk();
         }
-
-        //grab info
-        if (formerMovment == Move.FORWARD)
-        	if (!this.frontBumper){
-				botStatus = Status.FREE;
-			}else {
-				botStatus = Status.HIT;
-			}
 
         formerMovment = currMov;
         return currMov;
         /*TODO: Make this method better. Here's an example Roomba that always turns a random direction*/
 
 //		System.out.println(this.getDirection());
-//		if(this.turning && this.getDirection() == newDir) {
-//			this.turning = false;
-//		}
-//
-//		if(this.frontBumper && !this.turning) {
-//			turning = true;
-//			newDir = Direction.values()[(int)(Math.random()*Direction.values().length)];
-//			return Move.TURNCLOCKWISE;
-//		}
-//
-//		if(this.turning) { return Move.TURNCLOCKWISE; }
-//		return Move.FORWARD;
+
     }
 
     public Move turnToWest() {
