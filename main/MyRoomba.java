@@ -13,8 +13,8 @@ public class MyRoomba extends Roomba {
         forwardCache = 0;
         cornerGoDirFlag = 0;
         RandomCountSteps = 0;
-        farInfraredPoint = 80;
-        RandomCountthreshold = 1200;
+        farInfraredPoint = 70;
+        RandomCountthreshold = 1700;
         botjob = Job.OnCorner;
 
 
@@ -121,6 +121,7 @@ public class MyRoomba extends Roomba {
         RandomCountSteps++;
         if (RandomCountSteps > RandomCountthreshold){
             botjob = Job.OnRandomWalk;
+            RandomCountSteps = 0;
         }
         return currMov;
     }
@@ -139,6 +140,11 @@ public class MyRoomba extends Roomba {
 		}
 
 		if(this.turning) { return Move.TURNCLOCKWISE; }
+        RandomCountSteps = RandomCountSteps + 2;
+        if (RandomCountSteps > RandomCountthreshold){
+            botjob = Job.OnSweep;
+            RandomCountSteps = 0;
+        }
 		return Move.FORWARD;
     }
 
